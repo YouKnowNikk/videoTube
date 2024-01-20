@@ -1,0 +1,15 @@
+{
+  "name": "videotube",
+  "version": "1.0.0",
+  "description": "An video App",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Videotube",
+    "video"
+  ],
+  "author": "Nikesh Gupta",
+  "license": "ISC"
+}

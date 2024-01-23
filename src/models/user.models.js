@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken"
-import { emit } from "nodemon";
 const userSchema = new mongoose.Schema({
     username: {
         type: String,

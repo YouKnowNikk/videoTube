@@ -126,11 +126,7 @@ const userLogout = asyncHandler(async(req,res)=>{
 
 const refreshAccessToken= asyncHandler(async(req,res)=>{
     const {refreshToken , accessToken} = await genrateAccessTokenAndRefreshToken(req.user._id)
-    await User.findByIdAndUpdate(
-      req.user._id,
-      { $set: { refreshToken: refreshToken } },
-      { new: true }
-  )
+  
   const options = {
     httpOnly: true,
     secure: true
@@ -147,4 +143,29 @@ const refreshAccessToken= asyncHandler(async(req,res)=>{
       )
   )
 })
-export {userRegistration,userLogin,userLogout,refreshAccessToken}
+
+const updateProfile = asyncHandler(async(req,res)=>{
+   try {
+    const {email,username,fullName}= req.body;
+   const updatedUser = await User.findByIdAndUpdate(req.user._id,{$set:{fullName,username,email}},{new:true,runValidators:true}).select("-password -refreshtoken") ;
+   if(!updatedUser){
+    throw new ApiError(500 ,"Having trouble to update profile")
+   }
+   res.status(208).json(new ApiResponse(208,updatedUser,"Profile Updated")
+)
+   } catch (error) {
+    
+    if (error.name === "ValidationError") {
+        const validationErrors = Object.values(error.errors).map((err) => err.message);
+        throw new ApiError(400, validationErrors);
+    }
+
+    if (error.name === "MongoServerError" && error.code === 11000) {
+        
+        const duplicateField = Object.keys(error.keyValue)[0];
+        throw new ApiError(400, `${duplicateField} is already in use`);
+    }
+    
+    throw new ApiError(500, "Internal server error Duplicate key");
+}})
+export {userRegistration,userLogin,userLogout,refreshAccessToken,updateProfile}

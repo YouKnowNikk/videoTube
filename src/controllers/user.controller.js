@@ -8,7 +8,7 @@ const isStrongPassword = (password) => {
     const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
     return passwordRegex.test(password);
   };
- const genrateAccessTokenAndRefreshToken=async (userId)=>{
+  export const genrateAccessTokenAndRefreshToken=async (userId)=>{
     try {
         const user = await User.findById(userId);
         const accessToken =  user.genrateAccessToken();
@@ -103,13 +103,14 @@ const userLogin = asyncHandler(async (req,res)=>{
 })
 
 const userLogout = asyncHandler(async(req,res)=>{
-    await User.findByIdAndUpdate(
+   await User.findByIdAndUpdate(
         req.user._id,
     {
-        $set:{refreshToken: undefined}
+        $unset:{refreshToken: 1}
     },{
         new: true
     })
+
     const options = {
         httpOnly: true,
         secure: true
@@ -122,4 +123,28 @@ const userLogout = asyncHandler(async(req,res)=>{
     .json(new ApiResponse(200, {}, "User logged Out"))
 
 })
-export {userRegistration,userLogin,userLogout}
+
+const refreshAccessToken= asyncHandler(async(req,res)=>{
+    const {refreshToken , accessToken} = await genrateAccessTokenAndRefreshToken(req.user._id)
+    await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { refreshToken: refreshToken } },
+      { new: true }
+  )
+  const options = {
+    httpOnly: true,
+    secure: true
+}
+  return res
+  .status(200)
+  .cookie("accessToken", accessToken, options)
+  .cookie("refreshToken", refreshToken, options)
+  .json(
+      new ApiResponse(
+          200, 
+          {accessToken, refreshToken: refreshToken},
+          "Access token refreshed"
+      )
+  )
+})
+export {userRegistration,userLogin,userLogout,refreshAccessToken}

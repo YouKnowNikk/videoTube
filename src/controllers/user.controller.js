@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import {User} from "../models/user.models.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadOnCloudinary,deleteFromCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
 const isStrongPassword = (password) => {
@@ -151,7 +151,7 @@ const updateProfile = asyncHandler(async(req,res)=>{
    if(!updatedUser){
     throw new ApiError(500 ,"Having trouble to update profile")
    }
-   res.status(208).json(new ApiResponse(208,updatedUser,"Profile Updated")
+   return res.status(208).json(new ApiResponse(208,updatedUser,"Profile Updated")
 )
    } catch (error) {
     
@@ -168,4 +168,46 @@ const updateProfile = asyncHandler(async(req,res)=>{
     
     throw new ApiError(500, "Internal server error Duplicate key");
 }})
-export {userRegistration,userLogin,userLogout,refreshAccessToken,updateProfile}
+
+const changePassword = asyncHandler(async(req,res)=>{
+  const{oldPassword,newPassword}=req.body;
+  if (!isStrongPassword(newPassword)) {
+    throw new ApiError(400, "New Password should be strong with minimum 8 characters, special character, and number");
+  }
+   const user = await User.findById(req.user?._id)
+   if(!user){
+    throw new ApiError("400","Invalid Access")
+   }
+   console.log(user);
+   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+   if(!isPasswordCorrect){
+    throw new ApiError("401","Incorrect old password")
+   }
+   user.password = newPassword;
+   await user.save({validateBeforeSave:false});
+   return res.status(208).json(new ApiResponse(208,{},"password updated succesfully"))
+})
+
+const updateAvatar=asyncHandler(async(req,res)=>{
+  const userBeforeUpdate = await User.findById(req.user?._id).select('avatar');
+  
+  const avatarLocalPath = req.file?.path
+    if(!avatarLocalPath){
+      throw new ApiError(400, "Avatar file is missing")
+    }
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
+    if(!avatar.url){
+      throw new ApiError(400, "Error while uploading on avatar")
+    }
+    const user = await User.findByIdAndUpdate(req.user?._id,{
+      $set:{
+        avatar:avatar.url
+      }
+    },{new:true}).select("-password -refreshToken")
+    if (userBeforeUpdate.avatar) {
+      console.log("check");
+      deleteFromCloudinary(userBeforeUpdate.avatar);
+    }
+    return res.status(208).json(new ApiResponse(208,user,"Avtar Updated"))
+})
+export {userRegistration,userLogin,userLogout,refreshAccessToken,updateProfile,changePassword,updateAvatar}

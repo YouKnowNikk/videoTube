@@ -15,11 +15,25 @@ const uploadOnCloudinary = async(localFilePath)=>{
         const resp = await cloudinary.uploader.upload(localFilePath,{
             resource_type:"auto"
         })
-        console.log("file has been uploaded",resp.url);
         return resp;
     } catch (error) {
         fs.unlinkSync(localFilePath);
         return null
     }
 }
-export{uploadOnCloudinary}
+const deleteFromCloudinary = async (avatarUrl) => {
+    try {
+        const publicIdMatch = avatarUrl.match(/\/([^\/]+?)(\.[^.]+)?$/);
+        const publicId = publicIdMatch ? String(publicIdMatch[1]) : null;
+      const result = await cloudinary.uploader.destroy(publicId);
+  
+      if (result.result === 'ok') {
+        console.log(`Deleted avatar file from Cloudinary`);
+      } else {
+        console.error(`Error deleting avatar file from Cloudinary`);
+      }
+    } catch (error) {
+      console.error('Error deleting avatar file from Cloudinary:', error.message);
+    }
+  };
+export{uploadOnCloudinary,deleteFromCloudinary}

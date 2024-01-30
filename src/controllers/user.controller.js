@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import {User} from "../models/user.models.js";
 import { uploadOnCloudinary,deleteFromCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import mongoose from "mongoose";
 
 const isStrongPassword = (password) => {
     const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
@@ -273,4 +274,48 @@ if(!channel?.length){
 }
 return res.status(200).json(new ApiResponse(200,channel[0],"channel fetched succesfully"))
 })
-export {userRegistration,userLogin,userLogout,refreshAccessToken,updateProfile,changePassword,updateAvatar,getUserChannelProfile}
+
+const getUserWatchhistory= asyncHandler(async(req,res)=>{
+  const user = await User.aggregate([
+    {
+      $match:{
+        _id:new mongoose.Types.ObjectId(req.user._id)     
+       }
+    },
+    {
+      $lookup:{
+        from:"videos",
+        localField:"watchHistory",
+        foreignField:"_id",
+        as:'watchHistory',
+        pipeline:[
+          {
+            $lookup:{
+              from:'users',
+              localField:'owner',
+              foreignField:"_id",
+              as:"owner",
+              pipeline:[
+                {
+                  $project:{
+                    fullName:1,
+                    username:1,
+                    avatar:1,
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      $addFields:{
+        $first:"$owner"
+      }
+    }
+  ])
+        as:''
+  return res.status(200).json(new ApiResponse(200,user[0].watchHistory,"Fetched user History successfully"))
+})
+export {userRegistration,userLogin,userLogout,refreshAccessToken,updateProfile,changePassword,updateAvatar,getUserChannelProfile,getUserWatchhistory}
